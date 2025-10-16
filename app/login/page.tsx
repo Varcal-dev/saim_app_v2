@@ -1,17 +1,9 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { api } from "@/lib/api"
-import { Calculator, Info } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -25,15 +17,11 @@ export default function LoginPage() {
     e.preventDefault()
     setError("")
     setLoading(true)
-
     try {
-      let response
-      if (isLogin) {
-        response = await api.login({ username, password })
-      } else {
-        response = await api.register({ username, password })
-      }
-      localStorage.setItem("saim_username", response.username)
+      const response = isLogin ? await api.login({ username, password }) : await api.register({ username, password })
+      // backend should return token and username
+      if (response?.token) localStorage.setItem("saim_token", response.token)
+      if (response?.username) localStorage.setItem("saim_username", response.username)
       router.push("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al autenticar")
@@ -47,10 +35,10 @@ export default function LoginPage() {
     setPassword("demo123")
     setError("")
     setLoading(true)
-
     try {
       const response = await api.login({ username: "estudiante", password: "demo123" })
-      localStorage.setItem("saim_username", response.username)
+      if (response?.token) localStorage.setItem("saim_token", response.token)
+      if (response?.username) localStorage.setItem("saim_username", response.username)
       router.push("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al autenticar")
@@ -60,120 +48,59 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-muted/30">
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex flex-col items-center gap-2">
-          <div className="p-3 rounded-full bg-primary/10">
-            <Calculator className="w-10 h-10 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold">SAIM</h1>
-          <p className="text-sm text-muted-foreground">Sistema de Aprendizaje Interactivo de Matemáticas</p>
+    <div className="min-h-screen jungle-bg flex items-center justify-center px-4">
+      <div className="relative max-w-md w-full">
+        <div className="text-center mb-6">
+          <h1 className="saim-heading text-6xl">SAIM</h1>
         </div>
 
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Modo Demo:</strong> Usa las credenciales de prueba o crea una cuenta nueva para explorar la
-            aplicación.
-          </AlertDescription>
-        </Alert>
+        <div className="game-card p-6 rounded-3xl">
+          <div className="flex flex-col items-center gap-4">
+            <img src="/assets/cube-gold.png" alt="cube" className="w-36 h-36 object-contain" />
+            <form onSubmit={handleSubmit} className="w-full mt-2 space-y-4">
+              {error && <div className="p-3 rounded bg-red-100 text-red-800">{error}</div>}
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Usuario"
+                className="w-full px-4 py-3 rounded-xl border border-yellow-100 bg-white/90"
+                required
+                disabled={loading}
+              />
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Contraseña"
+                type="password"
+                className="w-full px-4 py-3 rounded-xl border border-yellow-100 bg-white/90"
+                required
+                disabled={loading}
+              />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{isLogin ? "Iniciar Sesión" : "Crear Cuenta"}</CardTitle>
-            <CardDescription>
-              {isLogin ? "Ingresa tus credenciales para continuar" : "Crea una cuenta para comenzar a aprender"}
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+              <button type="submit" className="saim-btn saim-btn-green w-full text-xl">
+                {loading ? "Cargando..." : isLogin ? "ENTRAR" : "CREAR CUENTA"}
+              </button>
 
-              <div className="space-y-2">
-                <Label htmlFor="username">Usuario</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="tu_usuario"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Cargando..." : isLogin ? "Iniciar Sesión" : "Crear Cuenta"}
-              </Button>
-
-              {isLogin && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  onClick={handleDemoLogin}
-                  disabled={loading}
-                >
-                  Probar con cuenta demo
-                </Button>
-              )}
+              <button type="button" onClick={handleDemoLogin} className="saim-btn saim-btn-yellow w-full text-lg">
+                Probar cuenta demo
+              </button>
 
               <div className="text-sm text-center">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsLogin(!isLogin)
-                    setError("")
-                  }}
-                  className="text-primary hover:underline"
-                  disabled={loading}
+                  onClick={() => { setIsLogin(!isLogin); setError("") }}
+                  className="underline text-pretty"
                 >
                   {isLogin ? "¿No tienes cuenta? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
 
-              <div className="text-sm text-center">
-                <Link href="/" className="text-muted-foreground hover:text-foreground">
-                  Volver al inicio
-                </Link>
-              </div>
-            </CardFooter>
-          </form>
-        </Card>
-
-        <Card className="bg-muted/50">
-          <CardContent className="pt-6">
-            <div className="text-sm space-y-2">
-              <p className="font-semibold">Credenciales de prueba:</p>
-              <div className="space-y-1 text-muted-foreground">
-                <p>
-                  Usuario: <code className="px-1 py-0.5 bg-background rounded">estudiante</code>
-                </p>
-                <p>
-                  Contraseña: <code className="px-1 py-0.5 bg-background rounded">demo123</code>
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mt-4 text-center text-sm text-pretty">
+          <Link href="/instructivo">Instructivo</Link> • <Link href="/progreso">Progreso</Link>
+        </div>
       </div>
     </div>
   )

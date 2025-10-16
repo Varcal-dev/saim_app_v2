@@ -2,17 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { api, type Level } from "@/lib/api"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Star, HelpCircle } from "lucide-react"
 import { GameBoard } from "@/components/game-board"
 import { RiemannControls } from "@/components/riemann-controls"
-import { HintModal } from "@/components/hint-modal"
 import { DoctorStatus } from "@/components/doctor-status"
+import { HintModal } from "@/components/hint-modal"
+import { api } from "@/lib/api"
 
-export interface RiemannParams {
+export type RiemannParams = {
   n: number
   method: "LEFT" | "RIGHT" | "MIDDLE" | "TRAPEZOID"
   a: number
@@ -20,150 +16,79 @@ export interface RiemannParams {
 }
 
 export default function NivelPage() {
+  const { id } = useParams()
+  const levelId = Number(id)
   const router = useRouter()
-  const params = useParams()
-  const levelId = Number(params.id)
 
-  const [level, setLevel] = useState<Level | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [showHint, setShowHint] = useState(false)
+  const [exercise, setExercise] = useState<any | null>(null)
+  const [riemannParams, setRiemannParams] = useState<RiemannParams>({ n: 4, method: "LEFT", a: -2, b: 2 })
   const [attempts, setAttempts] = useState(0)
-  const [stars, setStars] = useState(0)
   const [accuracy, setAccuracy] = useState(0)
-  const [riemannParams, setRiemannParams] = useState<RiemannParams>({
-    n: 4,
-    method: "LEFT",
-    a: -2,
-    b: 2,
-  })
+  const [hintOpen, setHintOpen] = useState(false)
 
   useEffect(() => {
-    const token = api.getToken()
-    if (!token) {
-      router.push("/login")
-      return
-    }
+    if (!levelId) return
+    loadExercise(levelId)
+  }, [levelId])
 
-    loadLevel()
-  }, [levelId, router])
-
-  const loadLevel = async () => {
+  const loadExercise = async (lid: number) => {
     try {
-      const levelData = await api.getLevel(levelId)
-      setLevel(levelData)
-    } catch (error) {
-      console.error("Error loading level:", error)
-      router.push("/dashboard")
-    } finally {
-      setLoading(false)
+      const res = await api.getExercise(lid)
+      setExercise(res)
+    } catch (e) {
+      console.error(e)
     }
-  }
-
-  const handleBack = () => {
-    router.push("/dashboard")
   }
 
   const handleAttemptComplete = (result: { correct: boolean; stars: number; error?: number }) => {
-    setAttempts((prev) => prev + 1)
-    if (result.error !== undefined) {
-      setAccuracy((1 - result.error) * 100)
-    }
+    setAttempts((a) => a + 1)
+    if (result.error !== undefined) setAccuracy(100 - result.error * 100)
     if (result.correct) {
-      setStars(result.stars)
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 2000)
+      // optionally show modal success or advance
     }
   }
 
-  if (loading) {
+  if (!exercise) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Cargando nivel...</p>
-        </div>
+      <div className="min-h-screen jungle-bg flex items-center justify-center">
+        <div className="text-center text-yellow-100">Cargando ejercicio...</div>
       </div>
     )
   }
 
-  if (!level) {
-    return null
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={handleBack}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Volver
-              </Button>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge>Nivel {level.id}</Badge>
-                  <h1 className="text-lg font-bold text-balance">{level.name}</h1>
-                </div>
-                <p className="text-sm text-muted-foreground text-pretty">{level.description}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">Intentos</p>
-                <p className="text-lg font-bold">{attempts}</p>
-              </div>
-              {stars > 0 && (
-                <div className="flex gap-1">
-                  {Array.from({ length: stars }).map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-accent text-accent" />
-                  ))}
-                </div>
-              )}
-              <Button variant="outline" size="sm" onClick={() => setShowHint(true)}>
-                <HelpCircle className="w-4 h-4 mr-2" />
-                Pista
-              </Button>
-            </div>
+    <div className="min-h-screen jungle-bg p-6">
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
+          <button className="saim-btn saim-btn-yellow px-4 py-2" onClick={() => router.push("/dashboard")}>← Volver</button>
+          <div>
+            <button className="saim-btn saim-btn-green px-4 py-2 mr-2" onClick={() => setHintOpen(true)}>Pedir pista</button>
           </div>
         </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Game Board */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-balance">Tablero de Juego</CardTitle>
-                <CardDescription className="text-pretty">
-                  Visualiza la función y calcula la suma de Riemann
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <GameBoard levelId={levelId} riemannParams={riemannParams} />
-              </CardContent>
-            </Card>
+        <DoctorStatus attempts={attempts} accuracy={accuracy} />
 
-            {/* Doctor Status */}
-            <DoctorStatus attempts={attempts} accuracy={accuracy} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2">
+            <GameBoard levelId={levelId} riemannParams={riemannParams} />
           </div>
 
-          {/* Controls */}
-          <div className="lg:col-span-1">
+          <aside className="space-y-4">
+            <div className="game-card p-4 rounded-2xl">
+              <h3 className="font-bold text-lg text-yellow-300 mb-2">{exercise.title}</h3>
+              <p className="text-pretty">{exercise.description}</p>
+            </div>
+
             <RiemannControls
               levelId={levelId}
               onAttemptComplete={handleAttemptComplete}
-              onParamsChange={setRiemannParams}
+              onParamsChange={(p) => setRiemannParams(p)}
             />
-          </div>
+          </aside>
         </div>
-      </main>
 
-      {/* Hint Modal */}
-      <HintModal open={showHint} onClose={() => setShowHint(false)} levelId={levelId} />
+        <HintModal open={hintOpen} onClose={() => setHintOpen(false)} levelId={levelId} />
+      </div>
     </div>
   )
 }

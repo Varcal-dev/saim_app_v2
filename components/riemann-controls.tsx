@@ -2,23 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { api, type AttemptRequest, type AttemptResponse } from "@/lib/api"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle2, XCircle } from "lucide-react"
-import type { RiemannParams } from "@/app/nivel/[id]/page"
 
 interface RiemannControlsProps {
   levelId: number
   onAttemptComplete: (result: { correct: boolean; stars: number; error?: number }) => void
-  onParamsChange?: (params: RiemannParams) => void
+  onParamsChange?: (params: { n: number; method: any; a: number; b: number }) => void
 }
 
 export function RiemannControls({ levelId, onAttemptComplete, onParamsChange }: RiemannControlsProps) {
-  const [n, setN] = useState("4")
+  const [n, setN] = useState("6")
   const [method, setMethod] = useState<"LEFT" | "RIGHT" | "MIDDLE" | "TRAPEZOID">("LEFT")
   const [a, setA] = useState("-2")
   const [b, setB] = useState("2")
@@ -26,29 +18,14 @@ export function RiemannControls({ levelId, onAttemptComplete, onParamsChange }: 
   const [result, setResult] = useState<AttemptResponse | null>(null)
 
   useEffect(() => {
-    if (onParamsChange) {
-      onParamsChange({
-        n: Number(n) || 4,
-        method,
-        a: Number(a) || -2,
-        b: Number(b) || 2,
-      })
-    }
+    onParamsChange && onParamsChange({ n: Number(n) || 4, method, a: Number(a) || -2, b: Number(b) || 2 })
   }, [n, method, a, b, onParamsChange])
 
   const handleSubmit = async () => {
     setLoading(true)
     setResult(null)
-
     try {
-      const attempt: AttemptRequest = {
-        levelId,
-        n: Number(n),
-        method,
-        a: Number(a),
-        b: Number(b),
-      }
-
+      const attempt: AttemptRequest = { levelId, n: Number(n), method, a: Number(a), b: Number(b) }
       const response = await api.submitAttempt(attempt)
       setResult(response)
       onAttemptComplete({ correct: response.correct, stars: response.stars, error: response.error })
@@ -60,99 +37,51 @@ export function RiemannControls({ levelId, onAttemptComplete, onParamsChange }: 
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-balance">Controles de Riemann</CardTitle>
-        <CardDescription className="text-pretty">Configura los parámetros para calcular la suma</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="method">Método</Label>
-          <Select value={method} onValueChange={(value: any) => setMethod(value)}>
-            <SelectTrigger id="method">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="LEFT">Izquierda</SelectItem>
-              <SelectItem value="RIGHT">Derecha</SelectItem>
-              <SelectItem value="MIDDLE">Punto Medio</SelectItem>
-              <SelectItem value="TRAPEZOID">Trapecio</SelectItem>
-            </SelectContent>
-          </Select>
+    <div className="game-card p-4 rounded-2xl">
+      <h4 className="font-semibold text-yellow-300 mb-2">Controles de Riemann</h4>
+
+      <div className="space-y-3">
+        <div>
+          <label className="text-sm text-pretty">Método</label>
+          <select className="w-full mt-1 rounded-md p-2" value={method} onChange={(e) => setMethod(e.target.value as any)}>
+            <option value="LEFT">Izquierda</option>
+            <option value="RIGHT">Derecha</option>
+            <option value="MIDDLE">Punto Medio</option>
+            <option value="TRAPEZOID">Trapecio</option>
+          </select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="n">Número de subdivisiones (n)</Label>
-          <Input
-            id="n"
-            type="number"
-            min="1"
-            max="100"
-            value={n}
-            onChange={(e) => setN(e.target.value)}
-            disabled={loading}
-          />
+        <div>
+          <label className="text-sm text-pretty">Subdivisiones (n)</label>
+          <input type="number" min={1} max={200} className="w-full mt-1 rounded-md p-2" value={n} onChange={(e) => setN(e.target.value)} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="a">Límite inferior (a)</Label>
-            <Input
-              id="a"
-              type="number"
-              step="0.1"
-              value={a}
-              onChange={(e) => setA(e.target.value)}
-              disabled={loading}
-            />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-sm text-pretty">a</label>
+            <input type="number" step="0.1" className="w-full mt-1 rounded-md p-2" value={a} onChange={(e) => setA(e.target.value)} />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="b">Límite superior (b)</Label>
-            <Input
-              id="b"
-              type="number"
-              step="0.1"
-              value={b}
-              onChange={(e) => setB(e.target.value)}
-              disabled={loading}
-            />
+          <div>
+            <label className="text-sm text-pretty">b</label>
+            <input type="number" step="0.1" className="w-full mt-1 rounded-md p-2" value={b} onChange={(e) => setB(e.target.value)} />
           </div>
         </div>
 
-        <Button onClick={handleSubmit} disabled={loading} className="w-full">
+        <button onClick={handleSubmit} disabled={loading} className="saim-btn saim-btn-green w-full text-lg">
           {loading ? "Calculando..." : "Calcular Suma de Riemann"}
-        </Button>
+        </button>
 
         {result && (
-          <Alert variant={result.correct ? "default" : "destructive"}>
-            <div className="flex items-start gap-3">
-              {result.correct ? (
-                <CheckCircle2 className="w-5 h-5 text-accent mt-0.5" />
-              ) : (
-                <XCircle className="w-5 h-5 mt-0.5" />
-              )}
-              <div className="flex-1 space-y-2">
-                <AlertDescription className="font-medium">{result.message}</AlertDescription>
-                <div className="text-sm space-y-1">
-                  <p>
-                    <span className="text-muted-foreground">Tu aproximación:</span>{" "}
-                    <span className="font-mono">{result.approximation.toFixed(4)}</span>
-                  </p>
-                  <p>
-                    <span className="text-muted-foreground">Valor exacto:</span>{" "}
-                    <span className="font-mono">{result.exactValue.toFixed(4)}</span>
-                  </p>
-                  <p>
-                    <span className="text-muted-foreground">Error:</span>{" "}
-                    <span className="font-mono">{(result.error * 100).toFixed(2)}%</span>
-                  </p>
-                </div>
-              </div>
+          <div className={`p-3 rounded ${result.correct ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}>
+            <div className="font-semibold">{result.message}</div>
+            <div className="text-sm text-pretty mt-2">
+              Tu aproximación: <code className="font-mono">{result.approximation.toFixed(4)}</code><br />
+              Valor exacto: <code className="font-mono">{result.exactValue.toFixed(4)}</code><br />
+              Error: <code className="font-mono">{(result.error * 100).toFixed(2)}%</code>
             </div>
-          </Alert>
+          </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
