@@ -62,13 +62,13 @@ async function register(data: { username: string; password: string }) {
 }
 
 async function getLevels(): Promise<Level[]> {
-  const res = await fetch(`${API_BASE}/levels`)
+  const res = await fetch(`${API_BASE}/niveles`)
   if (!res.ok) throw new Error("Error al obtener niveles")
   return await res.json()
 }
 
 async function getExercise(levelId: number) {
-  const res = await fetch(`${API_BASE}/exercises/${levelId}`)
+  const res = await fetch(`${API_BASE}/ejercicios/nivel/${levelId}`)
   if (!res.ok) throw new Error("Error al obtener ejercicio")
   return await res.json()
 }
@@ -87,7 +87,7 @@ async function submitAttempt(data: AttemptRequest): Promise<AttemptResponse> {
 }
 
 async function getProgress(): Promise<ProgressResponse> {
-  const res = await fetch(`${API_BASE}/progress`, {
+  const res = await fetch(`${API_BASE}/progreso`, {
     headers: { Authorization: `Bearer ${getToken()}` },
   })
   if (!res.ok) throw new Error("Error al obtener progreso")
