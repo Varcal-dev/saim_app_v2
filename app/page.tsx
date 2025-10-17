@@ -1,9 +1,77 @@
+'use client'
+import React, { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Home } from "lucide-react"
 
+const API_BASE = "http://localhost:3000"
+
 export default function HomePage() {
+  const router = useRouter()
+  const [niveles, setNiveles] = useState<{ id: number; nombre?: string }[]>([])
+  const [selectedNivel, setSelectedNivel] = useState<number | null>(null)
+  const [progreso, setProgreso] = useState<any>(null)
+  const [loadingNiveles, setLoadingNiveles] = useState(false)
+
+  useEffect(() => {
+    fetchNiveles()
+    // ejemplo: cargar progreso de usuario 1 (ajusta el id según auth real)
+    fetchProgreso(1)
+  }, [])
+
+  async function fetchNiveles() {
+    try {
+      setLoadingNiveles(true)
+      const res = await fetch(`${API_BASE}/api/niveles`)
+      if (!res.ok) throw new Error("Error al cargar niveles")
+      const data = await res.json()
+      setNiveles(data)
+      if (data && data.length > 0) setSelectedNivel(data[0].id)
+    } catch (err) {
+      console.error("fetchNiveles:", err)
+    } finally {
+      setLoadingNiveles(false)
+    }
+  }
+
+  async function fetchProgreso(idUsuario: number) {
+    try {
+      const res = await fetch(`${API_BASE}/api/progreso/${idUsuario}`)
+      if (!res.ok) throw new Error("Error al cargar progreso")
+      const data = await res.json()
+      setProgreso(data)
+    } catch (err) {
+      console.error("fetchProgreso:", err)
+    }
+  }
+
+  async function fetchEjerciciosPorNivel(idNivel: number) {
+    try {
+      const res = await fetch(`${API_BASE}/api/ejercicios/nivel/${idNivel}`)
+      if (!res.ok) throw new Error("Error al cargar ejercicios")
+      const data = await res.json()
+      // por ahora solo mostrar en consola; puedes almacenarlos en estado o navegar a una página de juego
+      console.log("Ejercicios del nivel", idNivel, data)
+      return data
+    } catch (err) {
+      console.error("fetchEjerciciosPorNivel:", err)
+      return null
+    }
+  }
+
+  async function handlePlay() {
+    const nivelId = selectedNivel ?? (niveles[0] && niveles[0].id)
+    if (!nivelId) {
+      alert("No hay niveles disponibles")
+      return
+    }
+    // obtener ejercicios (opcional) y luego navegar al dashboard pasando el nivel seleccionado
+    await fetchEjerciciosPorNivel(nivelId)
+    router.push(`/dashboard?nivel=${nivelId}`)
+  }
+
   return (
     <div className="min-h-screen jungle-bg p-6 flex flex-col items-center">
       {/* fondo suave */}
@@ -44,13 +112,34 @@ export default function HomePage() {
                 Explora niveles interactivos, resuelve problemas y sigue tu progreso con estadísticas visuales.
               </p>
 
+              <div className="mt-4">
+                <label className="text-sm text-white/70">Selecciona nivel</label>
+                <div className="mt-2">
+                  <select
+                    value={selectedNivel ?? ""}
+                    onChange={(e) => setSelectedNivel(Number(e.target.value))}
+                    className="p-2 rounded-md bg-white/5 w-full text-white"
+                    disabled={loadingNiveles}
+                  >
+                    {loadingNiveles && <option>cargando...</option>}
+                    {!loadingNiveles && niveles.length === 0 && <option>No hay niveles</option>}
+                    {!loadingNiveles &&
+                      niveles.map((n) => (
+                        <option key={n.id} value={n.id}>
+                          {n.nombre ?? `Nivel ${n.id}`}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
                 <Button
-                  asChild
                   size="lg"
                   className="col-span-1 md:col-span-3 text-lg py-3 font-bold saim-btn saim-btn-green"
+                  onClick={handlePlay}
                 >
-                  <Link href="/dashboard">JUGAR</Link>
+                  JUGAR
                 </Button>
 
                 <Button
@@ -84,6 +173,7 @@ export default function HomePage() {
 
       <footer className="max-w-6xl mx-auto w-full px-6 py-6 text-center text-white/60 text-sm">
         © {new Date().getFullYear()} SAIM — Proyecto educativo
+        {progreso && <div className="mt-2 text-xs text-white/60">Progreso cargado</div>}
       </footer>
     </div>
   )
